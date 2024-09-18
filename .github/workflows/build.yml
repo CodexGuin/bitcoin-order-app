@@ -12,13 +12,19 @@ jobs:
         node-version: [16.x]
 
     steps:
+      # Checkout the code
       - uses: actions/checkout@v2
+
+      # Install and set up Chrome for testing
       - uses: browser-actions/setup-chrome@latest
+
+      # Set up the Node.js version
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
 
+      # Cache node_modules to speed up builds
       - name: Cache node modules
         id: cache-nodemodules
         uses: actions/cache@v2
@@ -32,22 +38,28 @@ jobs:
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
+      # Install dependencies
       - name: Install Dependencies
         if: steps.cache-nodemodules.outputs.cache-hit != 'true'
         run: |
           npm ci --force
+
+      # Build the app
       - name: Build
         run: |
           npm run build --force
+
+      # Lint the app
       - name: Lint
         run: |
           npm run lint
+
+      # Update types to latest
       - name: Update types to latest
         run: |
           npm install --save-dev @types/node@latest --force
-      #- name: Test
-      #  run: |
-      #    npm run test --watch=false --browsers=ChromeHeadless
+
+      # Generate changelog
       - name: Conventional Changelog Action
         id: changelog
         uses: TriPSs/conventional-changelog-action@v3
@@ -55,6 +67,7 @@ jobs:
           github-token: ${{ secrets.WORKSHOP6_GITHUB_TOKEN }}
           output-file: "false"
 
+      # Create a new release if there are changes
       - name: Create Release
         uses: actions/create-release@v1
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
@@ -64,6 +77,9 @@ jobs:
           tag_name: ${{ steps.changelog.outputs.tag }}
           release_name: ${{ steps.changelog.outputs.tag }}
           body: ${{ steps.changelog.outputs.clean_changelog }}
+
+      # Deploy the app
       - name: Deploy
         run: |
           npm run deploy
+
